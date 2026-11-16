@@ -1136,6 +1136,17 @@ h3 {
   margin: 0;
 }
 
+.diagnostics-link {
+  margin: 14px 0 0;
+}
+
+.diagnostics-link a {
+  color: #145fbf;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .functionality p {
   margin: 14px 0 0;
   line-height: 1.55;

@@ -1,6 +1,29 @@
 {
-  "version": 2,
+  "version": 3,
   "description": "Lightweight Finnish dialect and spoken-language normalization rules for the speech boundary layer.",
+  "foreignTerms": [
+    {
+      "canonical": "Arctic AI botti",
+      "aliases": [
+        "Arctic AI botti",
+        "Arctic AI bot",
+        "ArcticAI botti",
+        "ArcticAI bot",
+        "Arktik AI botti",
+        "Arktik AI bot"
+      ],
+      "searchTranslation": "arktinen tekoälybotti"
+    },
+    {
+      "canonical": "Arctic AI",
+      "aliases": [
+        "Arctic AI",
+        "ArcticAI",
+        "Arktik AI"
+      ],
+      "searchTranslation": "arktinen tekoäly"
+    }
+  ],
   "common": {
     "phraseReplacements": [
       {

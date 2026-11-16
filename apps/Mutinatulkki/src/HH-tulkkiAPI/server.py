@@ -552,6 +552,70 @@ def apply_word_replacements(
     return text
 
 
+def foreign_term_matches(value: str, term: dict[str, Any]) -> bool:
+    """Return true when a configured foreign/proper term occurs as whole words."""
+    canonical = str(term.get("canonical") or "").strip()
+    aliases = term.get("aliases") if isinstance(term.get("aliases"), list) else []
+    variants = [canonical, *[str(alias or "").strip() for alias in aliases]]
+    return any(
+        variant and re.search(rf"(?<!\w){re.escape(variant)}(?!\w)", value, re.IGNORECASE)
+        for variant in variants
+    )
+
+
+def protect_foreign_terms(
+    value: str,
+    terms: list[Any],
+    changes: list[dict[str, Any]],
+) -> tuple[str, list[dict[str, Any]]]:
+    """Canonicalize known English/proper terms before dialect rules can touch them."""
+    text = str(value or "")
+    recognized: list[dict[str, Any]] = []
+
+    for item in terms:
+        if not isinstance(item, dict):
+            continue
+        canonical = str(item.get("canonical") or "").strip()
+        aliases = item.get("aliases") if isinstance(item.get("aliases"), list) else []
+        variants = [canonical, *[str(alias or "").strip() for alias in aliases]]
+        variants = sorted({variant for variant in variants if variant}, key=len, reverse=True)
+        if not canonical or not variants:
+            continue
+
+        pattern = rf"(?<!\w)(?:{'|'.join(re.escape(variant) for variant in variants)})(?!\w)"
+
+        def replace(match: re.Match[str]) -> str:
+            before = match.group(0)
+            after = canonical
+            if before != after:
+                record_normalization_change(changes, "foreign_term", before, after)
+            return after
+
+        before_replace = text
+        text = re.sub(pattern, replace, text, flags=re.IGNORECASE)
+        if before_replace != text or foreign_term_matches(text, {"canonical": canonical}):
+            recognized.append(item)
+
+    return text, recognized
+
+
+def make_foreign_term_search_variant(value: str, terms: list[dict[str, Any]]) -> str:
+    """Offer a Finnish meaning as a retrieval alternative, never as a visible rewrite."""
+    text = str(value or "")
+    for term in terms:
+        canonical = str(term.get("canonical") or "").strip()
+        translation = str(term.get("searchTranslation") or "").strip()
+        if not canonical or not translation:
+            continue
+        text = re.sub(
+            rf"(?<!\w){re.escape(canonical)}(?!\w)",
+            translation,
+            text,
+            flags=re.IGNORECASE,
+        )
+    return finalize_standard_fi_text(text)
+
+
 def remove_artificial_word_hyphens(value: str) -> str:
     """Treat a hyphen between spoken Finnish words as an STT punctuation artifact.
 
@@ -599,9 +663,11 @@ def normalize_speech_text(value: str) -> dict[str, Any]:
         }
 
     text = apply_common_speech_corrections(raw_text, changes)
+    lexicon = load_dialect_lexicon()
+    foreign_terms = lexicon.get("foreignTerms") if isinstance(lexicon.get("foreignTerms"), list) else []
+    text, recognized_foreign_terms = protect_foreign_terms(text, foreign_terms, changes)
 
     if NORMALIZE_DIALECT_TO_STANDARD:
-        lexicon = load_dialect_lexicon()
         common = lexicon.get("common") if isinstance(lexicon.get("common"), dict) else {}
         profile = get_dialect_profile(str(dialect.get("profile") or ""))
 
@@ -635,6 +701,7 @@ def normalize_speech_text(value: str) -> dict[str, Any]:
         "dialect": dialect,
         "replacementCount": len(changes),
         "replacements": changes[:30],
+        "foreignTerms": recognized_foreign_terms,
     }
 
 
@@ -651,10 +718,16 @@ def build_query_candidates(raw_text: str, normalization: dict[str, Any]) -> list
     interpretation work done here.
     """
     candidates: list[dict[str, Any]] = []
-    for kind, text in (
-        ("dialect_normalized", normalization.get("text")),
-        ("spoken_raw", finalize_standard_fi_text(raw_text)),
-    ):
+    foreign_terms = normalization.get("foreignTerms") if isinstance(normalization.get("foreignTerms"), list) else []
+    variants: list[tuple[str, Any]] = [("dialect_normalized", normalization.get("text"))]
+    if foreign_terms:
+        # Retain the spoken English/proper name for the person, while giving
+        # Finnish-only source text an equally grounded search alternative.
+        variants.append(("foreign_term_finnish_search", make_foreign_term_search_variant(normalization.get("text", ""), foreign_terms)))
+    else:
+        variants.append(("spoken_raw", finalize_standard_fi_text(raw_text)))
+
+    for kind, text in variants:
         clean = str(text or "").strip()
         if not clean or any(candidate["text"].casefold() == clean.casefold() for candidate in candidates):
             continue

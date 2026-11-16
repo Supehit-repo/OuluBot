@@ -775,7 +775,11 @@ def build_hits(query: str, top_k: int) -> tuple[list[dict[str, Any]], float]:
     return deduped[:top_k], best_dense_score
 
 
-def select_grounded_query(preferred: str, candidates: list[str] | None, top_k: int) -> tuple[str, list[dict[str, Any]]]:
+def select_grounded_query(
+    preferred: str,
+    candidates: list[str] | None,
+    top_k: int,
+) -> tuple[str, list[dict[str, Any]], list[dict[str, Any]], float]:
     """Prefer Murretulkki's reading unless another spoken candidate has clearly better evidence."""
     unique = [preferred.strip()]
     for candidate in candidates or []:
@@ -786,6 +790,8 @@ def select_grounded_query(preferred: str, candidates: list[str] | None, top_k: i
     assessments: list[dict[str, Any]] = []
     selected = unique[0]
     selected_score = -1.0
+    selected_hits: list[dict[str, Any]] = []
+    selected_dense_score = 0.0
     for candidate in unique:
         hits, dense_score = build_hits(candidate, top_k)
         grounded_score = float(hits[0]["final_score"]) if hits else 0.0
@@ -800,9 +806,15 @@ def select_grounded_query(preferred: str, candidates: list[str] | None, top_k: i
         if candidate != unique[0] and grounded_score >= selected_score + 0.12:
             selected = candidate
             selected_score = grounded_score
+            selected_hits = hits
+            selected_dense_score = dense_score
         elif candidate == unique[0]:
             selected_score = grounded_score
-    return selected, assessments
+            selected_hits = hits
+            selected_dense_score = dense_score
+    # The selected candidate has just been retrieved above. Reuse those hits
+    # in /chat instead of embedding and querying Qdrant a second time.
+    return selected, assessments, selected_hits, selected_dense_score
 
 
 @app.post("/search")
@@ -838,7 +850,11 @@ def search(request: SearchRequest) -> dict[str, Any]:
 @app.post("/chat")
 def chat(request: ChatRequest) -> dict[str, Any]:
     top_k = request.top_k or TOP_K
-    selected_query, candidate_assessments = select_grounded_query(request.query, request.candidates, top_k)
+    selected_query, candidate_assessments, hits, best_score = select_grounded_query(
+        request.query,
+        request.candidates,
+        top_k,
+    )
     request = ChatRequest(query=selected_query, top_k=top_k)
 
     if is_knowledge_basis_question(request.query):
@@ -890,8 +906,6 @@ def chat(request: ChatRequest) -> dict[str, Any]:
             "best_score": 1.0,
             "candidate_assessments": candidate_assessments,
         }
-
-    hits, best_score = build_hits(request.query, top_k)
 
     if not hits:
         return {

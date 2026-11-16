@@ -2,26 +2,28 @@ from __future__ import annotations
 
 import os
 import re
-import shutil
-import subprocess
-import tempfile
+import io
+import threading
 import time
+import wave
 from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
+from piper import PiperVoice
 from pydantic import BaseModel, Field
 
 
 SERVICE_NAME = "HH-TTSservice"
 MODELS_DIR = Path(os.getenv("PIPER_MODELS_DIR", "/models/piper"))
 DEFAULT_VOICE = os.getenv("PIPER_DEFAULT_VOICE", "fi_FI-harri-medium").strip()
-PIPER_BIN = os.getenv("PIPER_BIN", "piper").strip() or "piper"
 MAX_CHARS = int(os.getenv("TTS_MAX_CHARS", "5000"))
 TIMEOUT_SECONDS = int(os.getenv("TTS_TIMEOUT_SECONDS", "90"))
 VOICE_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+$")
+voice_cache: dict[str, PiperVoice] = {}
+voice_lock = threading.Lock()
 
 
 class SpeakRequest(BaseModel):
@@ -56,12 +58,6 @@ def elapsed_ms(started_at: float) -> int:
 
 def compact_error(error: BaseException) -> str:
     return f"{type(error).__name__}: {error}"
-
-
-def get_piper_path() -> str | None:
-    if Path(PIPER_BIN).is_file():
-        return PIPER_BIN
-    return shutil.which(PIPER_BIN)
 
 
 def normalize_text(text: str) -> str:
@@ -136,11 +132,19 @@ def list_available_voices() -> list[dict[str, Any]]:
     return voices
 
 
-def synthesize_wav(text: str, voice_id: str) -> tuple[bytes, dict[str, Any]]:
-    piper_path = get_piper_path()
-    if not piper_path:
-        raise HTTPException(status_code=503, detail=f"Piper binary not found: {PIPER_BIN}")
+def load_voice(voice_id: str) -> PiperVoice:
+    """Load a voice once per service process and retain its ONNX session."""
+    model_path = find_model_path(voice_id)
+    config_path = find_config_path(model_path)
+    cache_key = str(model_path)
+    voice = voice_cache.get(cache_key)
+    if voice is None:
+        voice = PiperVoice.load(str(model_path), config_path=str(config_path) if config_path else None)
+        voice_cache[cache_key] = voice
+    return voice
 
+
+def synthesize_wav(text: str, voice_id: str) -> tuple[bytes, dict[str, Any]]:
     clean_text = normalize_text(text)
     if not clean_text:
         raise HTTPException(status_code=400, detail="Text is empty.")
@@ -151,42 +155,20 @@ def synthesize_wav(text: str, voice_id: str) -> tuple[bytes, dict[str, Any]]:
     config_path = find_config_path(model_path)
     started_at = time.perf_counter()
 
-    with tempfile.TemporaryDirectory(prefix="hh-ttsservice-") as temp_dir:
-        output_path = Path(temp_dir) / "speech.wav"
-        command = [
-            piper_path,
-            "--model",
-            str(model_path),
-            "--output_file",
-            str(output_path),
-        ]
-
-        if config_path:
-            command.extend(["--config", str(config_path)])
-
+    # Piper/ONNX sessions are reusable but not documented as thread-safe.
+    # The lock prevents overlapping synthesis while also protecting the cache.
+    with voice_lock:
         try:
-            process = subprocess.run(
-                command,
-                input=clean_text,
-                capture_output=True,
-                encoding="utf-8",
-                timeout=TIMEOUT_SECONDS,
-                check=False,
-            )
-        except subprocess.TimeoutExpired as error:
-            raise HTTPException(status_code=504, detail="Piper synthesis timed out.") from error
+            voice = load_voice(voice_id)
+            output = io.BytesIO()
+            with wave.open(output, "wb") as wav_file:
+                voice.synthesize_wav(clean_text, wav_file)
+            wav_bytes = output.getvalue()
+        except Exception as error:  # noqa: BLE001
+            raise HTTPException(status_code=500, detail=f"Piper synthesis failed: {compact_error(error)}") from error
 
-        if process.returncode != 0:
-            stderr = (process.stderr or process.stdout or "").strip()
-            raise HTTPException(
-                status_code=500,
-                detail=f"Piper synthesis failed: {stderr[-500:] or 'unknown error'}",
-            )
-
-        if not output_path.is_file() or output_path.stat().st_size <= 0:
-            raise HTTPException(status_code=500, detail="Piper did not create WAV output.")
-
-        wav_bytes = output_path.read_bytes()
+    if not wav_bytes:
+        raise HTTPException(status_code=500, detail="Piper did not create WAV output.")
 
     metadata = {
         "voice": voice_id,
@@ -209,10 +191,6 @@ def healthz() -> dict[str, Any]:
 @app.get("/readyz")
 def readyz() -> JSONResponse:
     errors: list[str] = []
-    piper_path = get_piper_path()
-
-    if not piper_path:
-        errors.append(f"Piper binary not found: {PIPER_BIN}")
 
     try:
         model_path = find_model_path(resolve_voice_id(DEFAULT_VOICE))
@@ -226,7 +204,7 @@ def readyz() -> JSONResponse:
         content={
             "status": "ready" if not errors else "not_ready",
             "service": SERVICE_NAME,
-            "piper": piper_path,
+            "piper": "python-api",
             "modelsDir": str(MODELS_DIR),
             "defaultVoice": DEFAULT_VOICE,
             "defaultModel": str(model_path) if model_path else None,

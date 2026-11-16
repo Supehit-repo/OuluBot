@@ -1,0 +1,196 @@
+name: mutinatulkki
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    volumes:
+      - /srv/TKI-hankkeet/Mutinatulkki/qdrant-storage:/qdrant/storage
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - /srv/TKI-hankkeet/Mutinatulkki/ollama-data:/root/.ollama
+      - /srv/TKI-hankkeet/Mutinatulkki/llm-models:/models:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 10
+    restart: unless-stopped
+
+  ollama-models:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    volumes:
+      - /srv/TKI-hankkeet/Mutinatulkki/llm-models:/models:ro
+    entrypoint: ["/bin/sh", "-lc"]
+    command:
+      - >-
+        ollama create agentx-ahma -f /models/Ahma/Modelfile &&
+        ollama create agentx-ahma-v2 -f /models/Modelfile.agentx-ahma-v2 &&
+        ollama list
+    restart: "no"
+
+  agentapi:
+    build:
+      context: ./src/AgentAPI
+    image: mutinatulkki-agentapi:local
+    depends_on:
+      qdrant:
+        condition: service_started
+      ollama-models:
+        condition: service_completed_successfully
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      OLLAMA_URL: http://ollama:11434
+      COLLECTION_NAME: agentx_oamkjournal2025
+      OLLAMA_MODEL: agentx-ahma-v2
+      TOP_K: "3"
+      MIN_SCORE: "0.65"
+      CANDIDATE_K: "20"
+      EMBED_MODEL: TurkuNLP/sbert-cased-finnish-paraphrase
+      HF_HOME: /root/.cache/huggingface
+    volumes:
+      - /srv/TKI-hankkeet/Mutinatulkki/agentapi-hf-cache:/root/.cache/huggingface
+      - /srv/TKI-hankkeet/Mutinatulkki/dataset-config.json:/app/dataset-config.json:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/ready', timeout=3).read()"]
+      interval: 30s
+      timeout: 5s
+      start_period: 45s
+      retries: 10
+    restart: unless-stopped
+
+  asr:
+    build:
+      context: ./src/HH-tulkkiAPI/asr
+    image: mutinatulkki-asr:local
+    command: ["/bin/bash", "-lc", "exec -a mutinatulkki python3 -m uvicorn app:app --host 0.0.0.0 --port 8000"]
+    environment:
+      ASR_MODEL: Finnish-NLP/whisper-large-finnish-v3-ct2
+      ASR_DEVICE: cuda
+      ASR_COMPUTE_TYPE: float16
+      ASR_LANGUAGE: fi
+      ASR_TASK: transcribe
+      ASR_BEAM_SIZE: "5"
+      ASR_BEST_OF: "5"
+      ASR_VAD_FILTER: "1"
+      ASR_WORD_TIMESTAMPS: "0"
+      # Uncertain speech is decoded once more in memory with Silero VAD and a wider beam.
+      ASR_RETRY_ENABLED: "1"
+      ASR_RETRY_BEAM_SIZE: "8"
+      ASR_RETRY_VAD_FILTER: "1"
+      ASR_RETRY_LOW_AVG_LOGPROB: "-0.85"
+      ASR_RETRY_HIGH_NO_SPEECH_PROBABILITY: "0.55"
+      ASR_PRELOAD_MODEL: "1"
+      ASR_MODEL_IDLE_SECONDS: "900"
+      ASR_INITIAL_PROMPT: >-
+        Suomenkielistä puhetta. Kirjoita vain se mitä kuulet.
+        Älä täydennä epäselvää puhetta arvauksilla. Säilytä murre ja puhekieli.
+    volumes:
+      - /srv/TKI-hankkeet/Mutinatulkki/asr-models:/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/readyz', timeout=3).read()"]
+      interval: 30s
+      timeout: 5s
+      start_period: 90s
+      retries: 20
+    restart: unless-stopped
+
+  hh-tulkkiapi:
+    build:
+      context: ./src/HH-tulkkiAPI
+    image: mutinatulkki-hh-tulkkiapi:local
+    depends_on:
+      asr:
+        condition: service_healthy
+    environment:
+      HOST: 0.0.0.0
+      PORT: "8000"
+      MAX_BODY_BYTES: "31457280"
+      MAX_AUDIO_FILE_SIZE_MB: "100"
+      HH_STT_PROVIDER: http
+      HH_STT_ENDPOINT: http://asr:8000/transcribe
+      HH_STT_HTTP_FORMAT: multipart
+      HH_STT_TIMEOUT_SECONDS: "180"
+      HH_STT_USE_DRAFT_FAST_PATH: "0"
+      HH_STT_ALLOW_DRAFT_FALLBACK: "0"
+      HH_STT_VAD_FILTER: "0"
+      # Keep generic speech neutral; topic-specific terms are only safe when
+      # the calling UI can supply a verified conversation context.
+      HH_STT_INITIAL_PROMPT: >-
+        Suomenkielistä puhetta. Kirjoita vain se mitä kuulet.
+        Älä täydennä epäselvää puhetta arvauksilla. Säilytä murre ja puhekieli.
+      HH_DIALECT_LEXICON_PATH: /app/dialects/fi_dialects.json
+    volumes:
+      - ./src/HH-tulkkiAPI/dialects:/app/dialects:ro
+    restart: unless-stopped
+
+  hh-ttsservice:
+    build:
+      context: ./src/HH-TTSservice
+    image: mutinatulkki-hh-ttsservice:local
+    environment:
+      PIPER_MODELS_DIR: /models/piper
+      PIPER_DEFAULT_VOICE: fi_FI-harri-medium
+      PIPER_BIN: piper
+      TTS_MAX_CHARS: "5000"
+      TTS_TIMEOUT_SECONDS: "90"
+    volumes:
+      - /srv/TKI-hankkeet/Mutinatulkki/piper-models:/models/piper:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/readyz', timeout=3).read()"]
+      interval: 30s
+      timeout: 5s
+      start_period: 45s
+      retries: 10
+    restart: unless-stopped
+
+  mutinatulkki:
+    build:
+      context: ./src/Mutinatulkki
+    image: mutinatulkki-web:local
+    depends_on:
+      agentapi:
+        condition: service_healthy
+      hh-tulkkiapi:
+        condition: service_started
+      hh-ttsservice:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:5500:5500"
+    environment:
+      HOST: 0.0.0.0
+      PORT: "5500"
+      TULKKI_API_URL: http://hh-tulkkiapi:8000
+      AGENT_API_URL: http://agentapi:8000
+      TTS_API_URL: http://hh-ttsservice:8000
+      PUBLIC_TTS_ENDPOINT: api/tts/speak
+      TTS_VOICE: fi_FI-harri-medium
+      AGENT_TOP_K: "3"
+      TULKKI_TENANT_ID: local-mutinatulkki
+      TULKKI_CONFIG_ID: cfg_default_mutinatulkki
+      MAX_BODY_BYTES: "83886080"
+    volumes:
+      - /srv/TKI-hankkeet/Mutinatulkki/speech-config:/app/config
+    restart: unless-stopped

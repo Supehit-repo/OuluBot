@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+qdrant-client==1.17.1
+requests
+sentence-transformers
+torch

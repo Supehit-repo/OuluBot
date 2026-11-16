@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="fi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f5f7fb" />
+    <title>Oulu info bot</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles.css?v=20261007-message-flow" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="status-panel" aria-live="polite">
+        <button class="settings-button" id="settingsButton" type="button">Asetukset</button>
+
+        <div class="brand-row">
+          <div class="brand-content">
+            <div class="brand-name-wrap">
+              <h1 id="serviceName">Oulu info bot</h1>
+              <input
+                class="service-name-input"
+                id="serviceNameInput"
+                type="text"
+                maxlength="40"
+                aria-label="Palvelun nimi"
+                hidden
+              />
+              <button class="edit-name-button" id="editNameButton" type="button" aria-label="Muokkaa palvelun nimeä">
+                <span aria-hidden="true">✎</span>
+              </button>
+            </div>
+
+            <div class="response-output" aria-label="Vastauksen muoto">
+              <label class="response-choice">
+                <input id="responseTextCheckbox" type="checkbox" />
+                <span class="response-checkbox" aria-hidden="true"></span>
+                <span>Teksti</span>
+              </label>
+              <label class="response-choice">
+                <input id="responseAudioCheckbox" type="checkbox" />
+                <span class="response-checkbox" aria-hidden="true"></span>
+                <span>Ääni</span>
+              </label>
+            </div>
+
+            <audio
+              class="agent-audio-player"
+              id="agentAudioElement"
+              controls
+              autoplay
+              preload="auto"
+              aria-label="Viimeisin äänenä tuotettu vastaus"
+              hidden
+            ></audio>
+          </div>
+        </div>
+
+        <div class="state-hero" data-state="sleeping">
+          <div class="state-icon" id="stateIcon" aria-hidden="true">😴</div>
+          <div>
+            <p class="state-label" id="stateLabel">Nukkuu</p>
+            <p class="state-help" id="stateHelp">
+              Mikrofoni on päällä vain aktiivisen keskustelusession aikana.
+            </p>
+          </div>
+        </div>
+
+        <div class="meter-wrap" aria-hidden="true">
+          <div class="meter-track">
+            <div class="meter-fill" id="timerFill"></div>
+          </div>
+          <span id="timerText">60 s</span>
+        </div>
+
+        <button class="listen-button" id="listenButton" type="button">
+          <span class="button-icon" aria-hidden="true">🎙️</span>
+          <span>Aloita keskustelu</span>
+        </button>
+
+        <p class="support-note" id="supportNote" role="status">
+          Henkilökohtainen avustaja arjen askareisiin. Lisää tietoa Palvelutiedoissa asetusten alla.
+        </p>
+
+        <div class="settings-overlay" id="settingsOverlay" hidden>
+          <section
+            class="settings-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="settingsTitle"
+          >
+            <div class="settings-header">
+              <div>
+                <p class="eyebrow">Keskustelusession asetukset</p>
+                <h2 id="settingsTitle">Asetukset</h2>
+              </div>
+              <button class="settings-close" id="settingsCloseButton" type="button" aria-label="Sulje asetukset">
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
+
+            <div class="settings-content">
+              <section class="setting-group" aria-labelledby="themeSettingTitle">
+                <div>
+                  <h3 id="themeSettingTitle">Ulkoasu</h3>
+                  <p>Valitse vaalea tai silmiä säästävä tumma teema.</p>
+                </div>
+
+                <div class="setting-options" id="themeOptions" role="radiogroup" aria-label="Ulkoasu">
+                  <button type="button" class="setting-option theme-option" data-theme="light" role="radio">Vaalea</button>
+                  <button type="button" class="setting-option theme-option" data-theme="dark" role="radio">Tumma</button>
+                </div>
+              </section>
+
+              <section class="setting-group" aria-labelledby="timeoutSettingTitle">
+                <div>
+                  <h3 id="timeoutSettingTitle">Passiivisuuskatkaisu</h3>
+                  <p>
+                    Mikrofoni suljetaan automaattisesti, jos puhetta tai käyttöä ei havaita valitussa ajassa.
+                  </p>
+                </div>
+
+                <div class="setting-options" id="timeoutOptions" role="radiogroup" aria-label="Passiivisuuskatkaisu">
+                  <button type="button" class="setting-option timeout-option" data-timeout="10" role="radio">10 s</button>
+                  <button type="button" class="setting-option timeout-option" data-timeout="20" role="radio">20 s</button>
+                  <button type="button" class="setting-option timeout-option" data-timeout="30" role="radio">30 s</button>
+                  <button type="button" class="setting-option timeout-option" data-timeout="60" role="radio">60 s</button>
+                  <button type="button" class="setting-option timeout-option" data-timeout="120" role="radio">120 s</button>
+                  <button type="button" class="setting-option timeout-option" data-timeout="300" role="radio">300 s</button>
+                  <button type="button" class="setting-option timeout-option" data-timeout="600" role="radio">600 s</button>
+                </div>
+              </section>
+
+              <section class="setting-group" aria-labelledby="microphoneSensitivityTitle">
+                <div>
+                  <h3 id="microphoneSensitivityTitle">Mikrofonin herkkyys</h3>
+                  <p>
+                    Säätää, kuinka helposti ääni tulkitaan puheen aluksi. Matala vähentää taustamelun aiheuttamia turhia chunkkeja.
+                  </p>
+                </div>
+
+                <div class="setting-options" id="microphoneSensitivityOptions" role="radiogroup" aria-label="Mikrofonin herkkyys">
+                  <button type="button" class="setting-option microphone-sensitivity-option" data-sensitivity="low" role="radio">Matala</button>
+                  <button type="button" class="setting-option microphone-sensitivity-option" data-sensitivity="normal" role="radio">Normaali</button>
+                  <button type="button" class="setting-option microphone-sensitivity-option" data-sensitivity="high" role="radio">Korkea</button>
+                </div>
+              </section>
+
+              <section class="setting-group" aria-labelledby="chunkTimeoutSettingTitle">
+                <div>
+                  <h3 id="chunkTimeoutSettingTitle">Puheen katkaisun viive</h3>
+                  <p>
+                    Määrittää, kuinka pitkä hiljaisuus tarvitaan ennen kuin puheenvuoro lähetetään tulkintaan.
+                  </p>
+                </div>
+
+                <div class="setting-options" id="chunkTimeoutOptions" role="radiogroup" aria-label="Puheen katkaisun viive">
+                  <button type="button" class="setting-option chunk-timeout-option" data-chunk-timeout="400" role="radio">0,4 s</button>
+                  <button type="button" class="setting-option chunk-timeout-option" data-chunk-timeout="600" role="radio">0,6 s</button>
+                  <button type="button" class="setting-option chunk-timeout-option" data-chunk-timeout="800" role="radio">0,8 s</button>
+                  <button type="button" class="setting-option chunk-timeout-option" data-chunk-timeout="1000" role="radio">1,0 s</button>
+                  <button type="button" class="setting-option chunk-timeout-option" data-chunk-timeout="1200" role="radio">1,2 s</button>
+                  <button type="button" class="setting-option chunk-timeout-option" data-chunk-timeout="1500" role="radio">1,5 s</button>
+                </div>
+              </section>
+
+              <section class="setting-group disabled-settings" aria-labelledby="futureSettingsTitle">
+                <div>
+                  <h3 id="futureSettingsTitle">Tulossa myöhemmin</h3>
+                  <p>Nämä asetukset ovat vasta paikkamerkkejä, eivätkä tee vielä mitään.</p>
+                </div>
+
+                <div class="disabled-setting-list">
+                  <button type="button" disabled>Murteen oppiminen</button>
+                  <button type="button" disabled>Lähetä audiochunkit epävarmuuden mukaan</button>
+                  <button type="button" disabled>Vastausnopeus vs. tarkkuus</button>
+                  <button type="button" disabled>Debug-näkymä</button>
+                  <button type="button" disabled>Push-to-talk-tila</button>
+                  <button type="button" disabled>Jatkuva keskustelutila</button>
+                  <button type="button" disabled>Ääni / TTS-asetukset</button>
+                  <button type="button" disabled>Vain paikallinen käsittely</button>
+                  <button type="button" disabled>Edistyneet STT-asetukset</button>
+                  <button type="button" disabled>Paikallinen tallennuskansio</button>
+                </div>
+              </section>
+
+              <section class="setting-group legal-links" aria-labelledby="legalLinksTitle">
+                <div>
+                  <h3 id="legalLinksTitle">Palvelutiedot</h3>
+                  <p>
+                    Näistä näet, miten ääntä, tekstiä ja käyttäjätunnisteita käsitellään.
+                  </p>
+                </div>
+
+                <div class="legal-link-list">
+                  <button type="button" class="legal-link-button" id="privacyPolicyButton" data-policy-view="privacy">
+                    Privacy Policy
+                  </button>
+                  <button type="button" class="legal-link-button" id="termsButton" data-policy-view="terms">
+                    Terms of Service
+                  </button>
+                </div>
+              </section>
+            </div>
+
+            <section
+              class="policy-modal"
+              id="policyModal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="policyTitle"
+              hidden
+            >
+              <div class="settings-header">
+                <div>
+                  <p class="eyebrow" id="policyEyebrow">Palvelutiedot</p>
+                  <h2 id="policyTitle">Privacy Policy</h2>
+                </div>
+                <button class="settings-close" id="policyCloseButton" type="button" aria-label="Sulje palvelutiedot">
+                  <span aria-hidden="true">×</span>
+                </button>
+              </div>
+
+              <div class="policy-content">
+                <article class="policy-document" id="privacyPolicyContent" data-policy-content="privacy">
+                  <p class="policy-updated">Luonnos päivitetty 24.5.2026</p>
+                  <h3>Audio Zero-Retention Policy</h3>
+                  <p>
+                    Oulu info bot käsittelee ääntä vain väliaikaisesti puheen muuttamiseksi tekstiksi.
+                    Äänitiedostoja ei tallenneta selaimeen, palvelimen levylle, tulkkipalvelimelle, lokiin tai varmuuskopioihin.
+                  </p>
+                  <p>
+                    Kun ääni on lähetetty tulkille ja siitä on saatu tekstivastaus, äänidata poistetaan muistista heti.
+                    Jos tulkinta epäonnistuu, äänidata poistetaan silti ja käyttäjää pyydetään yrittämään uudelleen.
+                  </p>
+
+                  <h3>Mikrofonin käyttö</h3>
+                  <p>
+                    Mikrofoni on päällä vain aktiivisen keskustelusession aikana. Keskustelu alkaa käyttäjän painalluksesta ja päättyy
+                    käyttäjän pysäytykseen tai automaattiseen passiivisuuskatkaisuun.
+                  </p>
+
+                  <h3>Tallennettavat tiedot</h3>
+                  <p>
+                    Palvelu voi säilyttää tekstiksi tulkitun puheen, keskustelun tekniset tunnisteet, aikaleimat,
+                    sovellusversion sekä VAD- ja taukotunnistuksen metadataa. Ääntä ei säilytetä.
+                  </p>
+
+                  <h3>Käyttäjän ja laitteen tunnisteet</h3>
+                  <p>
+                    Käyttäjä ja selainlaite voidaan yksilöidä satunnaisilla tunnisteilla. Tunnisteita käytetään palvelun toimintaan,
+                    keskusteluhistorian erottamiseen ja väärinkäytösten rajoittamiseen.
+                  </p>
+
+                  <h3>Lokit ja virhetilanteet</h3>
+                  <p>
+                    Lokeihin ei kirjoiteta äänidataa, tunnistamatonta raakapuhetta, sessiotokeneita tai muita salaisuuksia.
+                    Virhetilanteissa kirjataan vain vian selvittämiseen tarpeelliset tekniset tiedot.
+                  </p>
+                </article>
+
+                <article class="policy-document" id="termsContent" data-policy-content="terms" hidden>
+                  <p class="policy-updated">Luonnos päivitetty 24.5.2026</p>
+                  <h3>Palvelun tarkoitus</h3>
+                  <p>
+                    Oulu info bot on selainpohjainen suomenkielinen puherajapinta. Palvelun tarkoitus on muuttaa käyttäjän puhe
+                    mahdollisimman sanatarkaksi tekstiksi ja välittää teksti myöhempää käsittelyä varten.
+                  </p>
+
+                  <h3>Ei hätä- tai hoitopalvelu</h3>
+                  <p>
+                    Palvelu ei ole hätäpalvelu, terveydenhuollon palvelu tai päätöksentekojärjestelmä. Tulkinta voi olla virheellinen,
+                    joten käyttäjän tai palvelun ylläpitäjän tulee tarkistaa tärkeät tiedot.
+                  </p>
+
+                  <h3>Käyttäjän vastuu</h3>
+                  <p>
+                    Käyttäjä vastaa siitä, ettei palveluun puhuta sellaisia tietoja, joita ei ole tarkoitettu käsiteltäväksi tässä palvelussa.
+                    Palvelua ei saa käyttää lainvastaiseen toimintaan tai toisen henkilön yksityisyyden loukkaamiseen.
+                  </p>
+
+                  <h3>Äänidatan käsittely</h3>
+                  <p>
+                    Ääni käsitellään vain tekstiksi tulkintaa varten. Äänitiedostoja ei säilytetä pysyvästi selaimessa, palvelimella
+                    tai tulkkipalvelussa. Pysyväksi tiedoksi voi jäädä tulkittu teksti ja tekninen metadata.
+                  </p>
+
+                  <h3>Muutokset</h3>
+                  <p>
+                    Palvelua kehitetään vaiheittain. Ehtoja ja tietosuojakuvausta päivitetään, kun tunnistautuminen, palvelinarkkitehtuuri
+                    tai tiedonkäsittely muuttuu.
+                  </p>
+                </article>
+              </div>
+            </section>
+          </section>
+        </div>
+      </section>
+
+      <section class="result-panel" aria-labelledby="resultTitle">
+        <div class="result-header">
+          <h2 id="resultTitle">Tulkinta ja vastaus</h2>
+          <div class="result-actions">
+            <button class="text-button speech-stop-button" id="stopSpeechButton" type="button" hidden disabled>
+              Pysäytä puhe
+            </button>
+            <button class="text-button" id="clearButton" type="button">Tyhjennä</button>
+          </div>
+        </div>
+
+        <div class="transcript-box" id="transcriptBox" tabindex="0">
+          <p class="placeholder" id="placeholderText">
+            Puhu kysymys. Tähän tulee tulkin teksti ja valittu vastausmuoto.
+          </p>
+          <p class="transcript" id="transcriptText"></p>
+          <p class="interim" id="interimText"></p>
+        </div>
+
+        <div class="result-details">
+          <details class="diagnostics">
+            <summary>Tekniset tiedot</summary>
+            <dl>
+              <div>
+                <dt>Tallennus</dt>
+                <dd id="recordingStatus">Ei tallennetta vielä</dd>
+              </div>
+              <div>
+                <dt>Äänisegmentit</dt>
+                <dd id="segmentStatus">0 kpl</dd>
+              </div>
+              <div>
+                <dt>Äänen tila</dt>
+                <dd id="speechStatus">Ei käytössä selaimessa</dd>
+              </div>
+              <div>
+                <dt>Puheen tila</dt>
+                <dd id="turnStatus">LISTENING / 800 ms</dd>
+              </div>
+              <div>
+                <dt>Paikallinen metadata</dt>
+                <dd id="saveStatus">Odottaa</dd>
+              </div>
+            </dl>
+          </details>
+
+          <details class="diagnostics functionality" open>
+            <summary>Toiminnallisuus</summary>
+            <p>
+              Puhe muutetaan ensin tekstiksi. Mutinatulkki tulkitsee murretta ja puhekieltä,
+              minkä jälkeen Oamk Journal -hausta valitaan parhaiten sopiva kysymys.
+            </p>
+            <p>
+              Jos tulkinta jää epävarmaksi, palvelu pyytää sanomaan asian uudelleen eikä arvaa vastausta.
+            </p>
+          </details>
+        </div>
+      </section>
+
+      <aside class="architecture-panel" aria-labelledby="architectureTitle">
+        <header class="architecture-header">
+          <p class="eyebrow">Messudemo</p>
+          <h2 id="architectureTitle">Näin vastaus muodostuu</h2>
+          <p>Kaikki käsittely tapahtuu paikallisissa Docker-konteissa.</p>
+          <p class="flow-live-status" id="flowLiveStatus" aria-live="polite">
+            <span aria-hidden="true"></span>Valmiina seuraavaan kysymykseen
+          </p>
+        </header>
+
+        <div class="message-flow" aria-label="Viestin kulkureitti">
+          <article class="flow-node flow-node-browser" data-flow-step="1">
+            <span class="flow-step">1</span>
+            <div>
+              <h3>Selain ja mikrofoni</h3>
+              <p>Äänen talteenotto ja puheenvuoron tunnistus</p>
+            </div>
+            <span class="flow-time">~0,4–1,5 s</span>
+          </article>
+
+          <div class="flow-connector" data-flow-connector="1" aria-hidden="true"><span></span></div>
+
+          <article class="flow-node" data-flow-step="2">
+            <span class="flow-step">2</span>
+            <div>
+              <h3>Mutinatulkki</h3>
+              <p>Välittää äänen ja hallitsee keskusteluvuoron</p>
+            </div>
+            <span class="flow-time">&lt; 50 ms</span>
+          </article>
+
+          <div class="flow-connector" data-flow-connector="2" aria-hidden="true"><span></span></div>
+
+          <article class="flow-node" data-flow-step="3">
+            <span class="flow-step">3</span>
+            <div>
+              <h3>HH-tulkkiAPI → Faster Whisper</h3>
+              <p>Puhe tekstiksi GPU:lla</p>
+            </div>
+            <span class="flow-time">~0,4–0,7 s</span>
+          </article>
+
+          <div class="flow-connector flow-connector-return" data-flow-connector="3" aria-hidden="true"><span></span></div>
+
+          <article class="flow-node" data-flow-step="4">
+            <span class="flow-step">4</span>
+            <div>
+              <h3>HH-tulkkiAPI</h3>
+              <p>Murre, sanasto ja kirjakielinen hakukysymys</p>
+            </div>
+            <span class="flow-time">~10 ms</span>
+          </article>
+
+          <div class="flow-connector" data-flow-connector="4" aria-hidden="true"><span></span></div>
+
+          <article class="flow-node flow-node-search" data-flow-step="5">
+            <span class="flow-step">5</span>
+            <div>
+              <h3>AgentAPI · Qdrant (~10 ms) · Ollama (~0,6–0,7 s)</h3>
+              <p>Oamk Journal -vektorihaku ja paikallinen vastaus</p>
+            </div>
+            <span class="flow-time">~1,4 s yhteensä</span>
+          </article>
+
+          <div class="flow-connector" data-flow-connector="5" aria-hidden="true"><span></span></div>
+
+          <article class="flow-node flow-node-voice" data-flow-step="6">
+            <span class="flow-step">6</span>
+            <div>
+              <h3>HH-TTSservice → selain</h3>
+              <p>Piper muodostaa äänen, teksti ja vastaus näytetään</p>
+            </div>
+            <span class="flow-time">~1 s</span>
+          </article>
+        </div>
+
+        <footer class="architecture-footer">
+          <span class="flow-pulse" aria-hidden="true"></span>
+          Viestipolku: ääni → teksti → Oamk Journal → vastaus
+        </footer>
+      </aside>
+    </main>
+
+    <script src="./app.js?v=20261007-message-flow" defer></script>
+  </body>
+</html>

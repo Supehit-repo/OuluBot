@@ -1,0 +1,598 @@
+{
+  "version": 2,
+  "description": "Lightweight Finnish dialect and spoken-language normalization rules for the speech boundary layer.",
+  "common": {
+    "phraseReplacements": [
+      {
+        "pattern": "\\b(?:mihin|niin)\\s+(?:tulkin\\s+)?tieto\\w*\\s+perustu\\w*\\b",
+        "replacement": "mihin perustat tietosi"
+      },
+      {
+        "pattern": "\\b(?:kirjolla|kirjoilla|kirolla|kirjola)\\s+johtaminen\\b",
+        "replacement": "tiedolla johtaminen"
+      },
+      {
+        "pattern": "^\\s*(?:tämä|tää)\\s+on\\s+datamaturiteet(?:ti|in|tia|ista)[.!?]*\\s*$",
+        "replacement": "mitä on datamaturiteetti"
+      },
+      {
+        "pattern": "^\\s*tiedolla\\s+johtaminen[.!?]*\\s*$",
+        "replacement": "mitä on tiedolla johtaminen"
+      },
+      {
+        "pattern": "\\btämä\\s+on\\s+(tiedolla\\s+johtaminen|datamaturiteetti)\\b",
+        "replacement": "mitä on \\1"
+      },
+      {
+        "pattern": "\\b(?:käskälu|kaskalu|keskalu)\\b",
+        "replacement": "lopeta keskustelu"
+      },
+      {
+        "pattern": "\\bopeta(?:\\s+(?:tämä\\s+)?)?keskustel\\w*\\b",
+        "replacement": "lopeta keskustelu"
+      },
+      {
+        "pattern": "\\bdataa\\s+maturi\\w*\\b",
+        "replacement": "datamaturiteetista"
+      },
+      {
+        "pattern": "\\blaita(?:ppa|ppas|pa|pas)?\\s+(?:semmonen|sellainen)\\s+muistiin\\s+että\\b",
+        "replacement": "laita muistiin, että"
+      },
+      {
+        "pattern": "\\blaita(?:han|hän|ppa|ppas|pa|pas)?\\s+muisti\\s+että\\b",
+        "replacement": "laita muistiin, että"
+      },
+      {
+        "pattern": "\\blaita(?:han|hän|ppa|ppas|pa|pas)?\\s+muistiin\\s+että\\b",
+        "replacement": "laita muistiin, että"
+      },
+      {
+        "pattern": "\\bmerkkaa(?:ppa|ppas|pa|pas|han|hän)?\\s+kalenter(?:in|iin)\\s+että\\b",
+        "replacement": "merkitse kalenteriin, että"
+      },
+      {
+        "pattern": "\\bmerkitse\\s+kalenter(?:in|iin)\\s+että\\b",
+        "replacement": "merkitse kalenteriin, että"
+      },
+      {
+        "pattern": "\\bkatso\\s+onko\\b",
+        "replacement": "katso, onko"
+      }
+    ],
+    "postPhraseReplacements": [
+      {
+        "pattern": "\\bmit(?:ä|a)s\\s+tietoa\\s+l(?:ö|o)yd(?:ä|a)\\s+datamaturiteetista\\b",
+        "replacement": "mitä tietoa löydät datamaturiteetista"
+      },
+      {
+        "pattern": "\\blaita\\s+sellainen\\s+muistiin\\s+että\\b",
+        "replacement": "laita muistiin, että"
+      },
+      {
+        "pattern": "\\blaita\\s+muistiin\\s+että\\b",
+        "replacement": "laita muistiin, että"
+      },
+      {
+        "pattern": "\\bmuistiin\\s+että\\b",
+        "replacement": "muistiin, että"
+      },
+      {
+        "pattern": "\\bettä\\s+ota\\s+(?:tää|tämä)\\s+otetaan\\b",
+        "replacement": "että tämä otetaan"
+      },
+      {
+        "pattern": "\\bkalenterin\\s+että\\b",
+        "replacement": "kalenteriin, että"
+      },
+      {
+        "pattern": "\\bkalenteriin\\s+että\\b",
+        "replacement": "kalenteriin, että"
+      },
+      {
+        "pattern": "\\bkatso\\s+onko\\b",
+        "replacement": "katso, onko"
+      }
+    ],
+    "wordReplacements": {
+      "mä": "minä",
+      "mää": "minä",
+      "mun": "minun",
+      "mua": "minua",
+      "mulle": "minulle",
+      "sä": "sinä",
+      "sää": "sinä",
+      "sun": "sinun",
+      "sua": "sinua",
+      "sulle": "sinulle",
+      "oon": "olen",
+      "oot": "olet",
+      "ossaan": "osaan",
+      "johetaan": "johdetaan",
+      "dattaa": "dataa",
+      "ollaan": "olemme",
+      "onks": "onko",
+      "voiks": "voitko",
+      "omk": "OAMK",
+      "oamk": "OAMK",
+      "oamkissa": "OAMKissa",
+      "oamkista": "OAMKista",
+      "oamkiin": "OAMKiin",
+      "pitäis": "pitäisi",
+      "pitäs": "pitäisi",
+      "pitäskö": "pitäisikö",
+      "käviskö": "kävisikö",
+      "häätyy": "täytyy",
+      "häytyy": "täytyy",
+      "häätyis": "täytyisi",
+      "häytyis": "täytyisi",
+      "tää": "tämä",
+      "tän": "tämän",
+      "toi": "tuo",
+      "ton": "tuon",
+      "käyä": "käydä",
+      "tehä": "tehdä",
+      "nähä": "nähdä",
+      "lähen": "lähden",
+      "lähet": "lähdet",
+      "lähössä": "lähdössä",
+      "laitappa": "laita",
+      "laitappas": "laita",
+      "laitapa": "laita",
+      "laitapas": "laita",
+      "merkkaappa": "merkitse",
+      "merkkaappas": "merkitse",
+      "merkkaapa": "merkitse",
+      "merkkaapas": "merkitse",
+      "merkkaahan": "merkitse",
+      "merkkaa": "merkitse",
+      "merkkaamaan": "merkitsemään",
+      "merkata": "merkitä",
+      "muistappa": "muista",
+      "muistappas": "muista",
+      "haeppa": "hae",
+      "haeppas": "hae",
+      "katoppa": "katso",
+      "katsoppa": "katso",
+      "kato": "katso",
+      "kerroppa": "kerro",
+      "kerroppas": "kerro",
+      "semmonen": "sellainen",
+      "semmoinen": "sellainen",
+      "tommonen": "tuollainen",
+      "tämmönen": "tällainen",
+      "tänneppäin": "tänne päin",
+      "miitinkiin": "kokoukseen",
+      "miitinkin": "kokoukseen",
+      "miittiin": "kokoukseen",
+      "meetingiin": "kokoukseen",
+      "meetinkiin": "kokoukseen",
+      "salesta": "Salesta",
+      "saleen": "Saleen"
+    }
+  },
+  "profiles": {
+    "meankieli": {
+      "label": "Meänkieli / Peräpohjola",
+      "markers": {
+        "mie": 3,
+        "sie": 3,
+        "met": 2,
+        "tet": 2,
+        "molhaan": 3,
+        "meän": 2,
+        "teän": 2,
+        "pittää": 2,
+        "pittääpi": 2,
+        "häätyy": 3,
+        "häytyy": 3,
+        "käyä": 2,
+        "tehä": 2,
+        "nähä": 2,
+        "lähössä": 2,
+        "emmie": 3,
+        "en mie": 3,
+        "son": 2,
+        "soli": 2,
+        "sole": 2,
+        "tiiä": 2,
+        "tännään": 2
+      },
+      "phraseReplacements": [
+        {
+          "pattern": "\\ben\\s+mie\\b",
+          "replacement": "en minä"
+        },
+        {
+          "pattern": "\\bei\\s+sole\\b",
+          "replacement": "ei se ole"
+        }
+      ],
+      "wordReplacements": {
+        "mie": "minä",
+        "sie": "sinä",
+        "met": "me",
+        "tet": "te",
+        "molhaan": "me ollaan",
+        "meän": "meidän",
+        "teän": "teidän",
+        "emmie": "en minä",
+        "son": "se on",
+        "soli": "se oli",
+        "sole": "se ole",
+        "pittää": "pitää",
+        "pittääpi": "pitää",
+        "häätyy": "täytyy",
+        "häytyy": "täytyy",
+        "häätyis": "täytyisi",
+        "häytyis": "täytyisi",
+        "pitäs": "pitäisi",
+        "käyä": "käydä",
+        "käymhän": "käymme",
+        "tehä": "tehdä",
+        "nähä": "nähdä",
+        "lähen": "lähden",
+        "lähet": "lähdet",
+        "lähössä": "lähdössä",
+        "menhän": "menemme",
+        "tulemma": "tulemme",
+        "tiiä": "tiedä",
+        "tiä": "tiedä",
+        "tännään": "tänään"
+      }
+    },
+    "oulu": {
+      "label": "Oulun seudun murre",
+      "markers": {
+        "ookkonää": 5,
+        "hookkonää": 5,
+        "ootkonää": 5,
+        "ookko nää": 5,
+        "hookko nää": 5,
+        "ootko nää": 5,
+        "alakko nää": 5,
+        "voikko nää": 5,
+        "voisikko nää": 5,
+        "muistakko nää": 5,
+        "pelekääkkö nää": 5,
+        "nää oot": 4,
+        "ookko": 3,
+        "hookko": 3,
+        "ootko": 3,
+        "alakko": 3,
+        "voikko": 3,
+        "voisikko": 3,
+        "muistakko": 3,
+        "pelekääkkö": 3,
+        "nää": 1,
+        "meleko": 2,
+        "melekonen": 2,
+        "pölijä": 2,
+        "pöljiä": 2,
+        "talavi": 2,
+        "pelekka": 2,
+        "pelekkä": 2,
+        "ilima": 2,
+        "oulusa": 2,
+        "polliisi": 2,
+        "palijo": 2,
+        "vähä": 1,
+        "tolokun": 2,
+        "tolkula": 2,
+        "tolalla": 2,
+        "kylymä": 1,
+        "kylymässä": 2,
+        "vanaha": 1,
+        "valakia": 2,
+        "valakonen": 2,
+        "täsä": 1,
+        "tuosa": 1,
+        "meijän": 2,
+        "teijän": 2,
+        "minnoon": 3,
+        "kyllon": 3,
+        "soon": 3,
+        "soli": 3,
+        "siinon": 3,
+        "eijjoo": 3,
+        "mittään": 2,
+        "kettää": 2,
+        "nuin": 2,
+        "misä": 2,
+        "täälä": 2,
+        "sielä": 2,
+        "justiisa": 2,
+        "heleposti": 2,
+        "ihimisiksi": 2,
+        "jalaka": 2,
+        "selekä": 2,
+        "silimä": 2,
+        "kolome": 2,
+        "nelijä": 2,
+        "jäläkeen": 2,
+        "uuven": 2,
+        "yhen": 2,
+        "yheksän": 2,
+        "kahella": 2,
+        "yhellä": 2,
+        "kahavea": 2,
+        "kiini": 2,
+        "alakaa": 2,
+        "alako": 2,
+        "alakanu": 2,
+        "lähtiä": 2,
+        "pärijää": 2,
+        "tullee": 2,
+        "mennee": 2,
+        "tekköö": 2,
+        "tekkee": 2,
+        "sannoo": 2,
+        "puhhuu": 2,
+        "lähtöö": 2,
+        "näkkee": 2,
+        "hakkee": 2,
+        "tarijota": 2,
+        "tarijotaan": 2,
+        "pottu": 2,
+        "onnikka": 2,
+        "kompiainen": 2,
+        "aliska": 2,
+        "pahki": 2,
+        "rössypottu": 3,
+        "potnapekka": 3,
+        "ölövinä": 2,
+        "hööli": 2,
+        "ronklata": 2,
+        "rävöttää": 2,
+        "leuhka": 2,
+        "ruoja": 2,
+        "pilikille": 2
+      },
+      "phraseReplacements": [
+        {
+          "pattern": "\\bminnoon\\b",
+          "replacement": "minä olen"
+        },
+        {
+          "pattern": "\\bkyllon\\b",
+          "replacement": "kyllä on"
+        },
+        {
+          "pattern": "\\bsoon\\b",
+          "replacement": "se on"
+        },
+        {
+          "pattern": "\\bsoli\\b",
+          "replacement": "se oli"
+        },
+        {
+          "pattern": "\\bsiinon\\b",
+          "replacement": "siinä on"
+        },
+        {
+          "pattern": "\\beijjoo\\b",
+          "replacement": "ei ole"
+        },
+        {
+          "pattern": "\\bh?ookkonää\\b",
+          "replacement": "oletko sinä"
+        },
+        {
+          "pattern": "\\bootkonää\\b",
+          "replacement": "oletko sinä"
+        },
+        {
+          "pattern": "\\bh?ookko\\s+nää\\b",
+          "replacement": "oletko sinä"
+        },
+        {
+          "pattern": "\\bootko\\s+nää\\b",
+          "replacement": "oletko sinä"
+        },
+        {
+          "pattern": "\\balakko\\s+nää\\b",
+          "replacement": "alatko sinä"
+        },
+        {
+          "pattern": "\\bvoikko\\s+nää\\b",
+          "replacement": "voitko sinä"
+        },
+        {
+          "pattern": "\\bvoisikko\\s+nää\\b",
+          "replacement": "voisitko sinä"
+        },
+        {
+          "pattern": "\\bmuistakko\\s+nää\\b",
+          "replacement": "muistatko sinä"
+        },
+        {
+          "pattern": "\\bpelekääkkö\\s+nää\\b",
+          "replacement": "pelkäätkö sinä"
+        },
+        {
+          "pattern": "\\bnää\\s+oot\\b",
+          "replacement": "sinä olet"
+        },
+        {
+          "pattern": "\\bnää\\s+(muistat|voit|alat|käyt|teet|tarvitset)\\b",
+          "replacement": "sinä \\1"
+        },
+        {
+          "pattern": "\\btalo\\s+kun\\b",
+          "replacement": "järkevä"
+        }
+      ],
+      "wordReplacements": {
+        "ookkonää": "oletko sinä",
+        "hookkonää": "oletko sinä",
+        "ootkonää": "oletko sinä",
+        "ookko": "oletko",
+        "hookko": "oletko",
+        "ootko": "oletko",
+        "nää": "sinä",
+        "alakko": "alatko",
+        "voikko": "voitko",
+        "voisikko": "voisitko",
+        "muistakko": "muistatko",
+        "pelekääkkö": "pelkäätkö",
+        "muistanu": "muistanut",
+        "meleko": "melko",
+        "melekonen": "melkoinen",
+        "pölijä": "pöljä",
+        "pöljiä": "pöljä",
+        "talavi": "talvi",
+        "pelekka": "pelkkä",
+        "pelekkä": "pelkkä",
+        "ilima": "ilma",
+        "iliman": "ilman",
+        "valakia": "valkea",
+        "valakonen": "valkoinen",
+        "vanaha": "vanha",
+        "kylymä": "kylmä",
+        "kylymässä": "kylmässä",
+        "oulusa": "Oulussa",
+        "polliisi": "poliisi",
+        "polliisia": "poliisia",
+        "pittää": "pitää",
+        "pittääpi": "pitää",
+        "käyä": "käydä",
+        "tehä": "tehdä",
+        "nähä": "nähdä",
+        "saaha": "saada",
+        "jottai": "jotain",
+        "mittää": "mitään",
+        "palijo": "paljon",
+        "vähä": "vähän",
+        "melekeen": "melkein",
+        "tolokun": "järkevä",
+        "tolkula": "hyvällä",
+        "tolalla": "mallilla",
+        "täsä": "tässä",
+        "tuosa": "tuossa",
+        "kahavi": "kahvi",
+        "kahavia": "kahvia",
+        "maitua": "maitoa",
+        "puurua": "puuroa",
+        "pimiä": "pimeä"
+        ,"meijän": "meidän"
+        ,"teijän": "teidän"
+        ,"mulla": "minulla"
+        ,"sulla": "sinulla"
+        ,"ookko": "oletko"
+        ,"ootta": "olette"
+        ,"kyllon": "kyllä on"
+        ,"soon": "se on"
+        ,"soli": "se oli"
+        ,"siinon": "siinä on"
+        ,"eijjoo": "ei ole"
+        ,"nääkkö": "näetkö"
+        ,"tiiäkkö": "tiedätkö"
+        ,"tiiän": "tiedän"
+        ,"mittään": "mitään"
+        ,"kettää": "ketään"
+        ,"nuin": "noin"
+        ,"misä": "missä"
+        ,"täälä": "täällä"
+        ,"sielä": "siellä"
+        ,"justiisa": "juuri"
+        ,"heleposti": "helposti"
+        ,"ihimisiksi": "ihmisiksi"
+        ,"jalaka": "jalka"
+        ,"jalakoja": "jalkoja"
+        ,"selekä": "selkä"
+        ,"selekeä": "selkeä"
+        ,"silimä": "silmä"
+        ,"silimät": "silmät"
+        ,"kolome": "kolme"
+        ,"nelijä": "neljä"
+        ,"jäläkeen": "jälkeen"
+        ,"uuven": "uuden"
+        ,"yhen": "yhden"
+        ,"kaheksan": "kahdeksan"
+        ,"yheksän": "yhdeksän"
+        ,"kahella": "kahdella"
+        ,"yhellä": "yhdellä"
+        ,"kahavea": "kahvia"
+        ,"kiini": "kiinni"
+        ,"saje": "sade"
+        ,"alakaa": "alkaa"
+        ,"alako": "alkoi"
+        ,"alakanu": "alkanut"
+        ,"alakko": "alatko"
+        ,"pelekää": "pelkää"
+        ,"pelekään": "pelkään"
+        ,"pelekästään": "pelkästään"
+        ,"saanukkaan": "saanutkaan"
+        ,"lähtä": "lähteä"
+        ,"lähtiä": "lähteä"
+        ,"pärijää": "pärjää"
+        ,"tullee": "tulee"
+        ,"mennee": "menee"
+        ,"tekköö": "tekee"
+        ,"tekkee": "tekee"
+        ,"sannoo": "sanoo"
+        ,"puhhuu": "puhuu"
+        ,"kattoo": "katsoo"
+        ,"lähtöö": "lähtee"
+        ,"näkkee": "näkee"
+        ,"hakkee": "hakee"
+        ,"tekkijä": "tekijä"
+        ,"tarijota": "tarjota"
+        ,"tarijotaan": "tarjotaan"
+        ,"pölijä": "hölmö"
+        ,"pöljiä": "hölmöjä"
+        ,"tolokku": "järkevä"
+        ,"tolokuton": "järjetön"
+        ,"pottu": "peruna"
+        ,"onnikka": "linja auto"
+        ,"kompiainen": "karamelli"
+        ,"aliska": "alushame"
+        ,"aliskaa": "alushametta"
+        ,"pahki": "päin"
+        ,"rössy": "veripalttu"
+        ,"rössypottu": "rössystä ja perunasta valmistettu ruoka"
+        ,"potnapekka": "Oulun kaupunkijuna"
+        ,"ölövinä": "olevinaan"
+        ,"hööli": "antelias"
+        ,"ronklata": "nirsoilla"
+        ,"rävöttää": "retkottaa"
+        ,"leuhka": "mahtaileva"
+        ,"ruoja": "lurjus"
+        ,"pilikille": "pilkille"
+      }
+    },
+    "spoken_fi": {
+      "label": "Suomen yleispuhekieli",
+      "markers": {
+        "mä": 2,
+        "mää": 2,
+        "sä": 2,
+        "sää": 2,
+        "mun": 1,
+        "sun": 1,
+        "oon": 1,
+        "oot": 1,
+        "pitäis": 1,
+        "pitäs": 1,
+        "onks": 2,
+        "voiks": 2,
+        "omk": 2,
+        "oamk": 2,
+        "tää": 1,
+        "toi": 1,
+        "semmonen": 1,
+        "tommonen": 1,
+        "laitahan": 2,
+        "laitappa": 2,
+        "merkkaappa": 2,
+        "merkkaa": 1,
+        "katoppa": 2,
+        "miitinkiin": 1,
+        "miitinkin": 1,
+        "miittiin": 1
+      },
+      "phraseReplacements": [],
+      "wordReplacements": {}
+    }
+  }
+}

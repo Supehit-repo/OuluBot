@@ -1,0 +1,11 @@
+{
+  "adaptivePauseThresholdMs": 600,
+  "minPauseThresholdMs": 600,
+  "maxPauseThresholdMs": 1500,
+  "falseEndings": 451,
+  "confirmedEndings": 1480,
+  "consecutiveFalseEndings": 0,
+  "numberOfConversations": 75,
+  "backchannelText": "",
+  "finalResponseTestText": "Puheen loppu varmistui. Odotetaan tulkin tekstivastausta."
+}

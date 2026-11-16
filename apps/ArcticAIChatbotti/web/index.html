@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="fi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ArcticAIChatbotti</title>
+  </head>
+  <body>
+    <h1>ArcticAIChatbotti</h1>
+    <p>Testisivu toimii</p>
+    <p>Varsinaista paikallista kielimallia käyttävä chatbot rakennetaan myöhemmin. Alla oleva lomake käyttää tällä hetkellä Dockerissa ajettavaa kehitysagenttia.</p>
+
+    <form id="chat-form">
+      <label for="message">Viesti</label>
+      <input id="message" name="message" required maxlength="4000">
+      <button type="submit">Lähetä</button>
+    </form>
+    <p id="response" aria-live="polite"></p>
+
+    <script>
+      const form = document.querySelector('#chat-form');
+      const response = document.querySelector('#response');
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        response.textContent = 'Odotetaan vastausta...';
+
+        try {
+          const result = await fetch('./api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: form.message.value })
+          });
+          const data = await result.json();
+          response.textContent = result.ok ? data.reply : (data.detail || 'Pyyntö epäonnistui.');
+        } catch {
+          response.textContent = 'Agenttirajapinta ei ole vielä saatavilla tältä sivulta.';
+        }
+      });
+    </script>
+  </body>
+</html>

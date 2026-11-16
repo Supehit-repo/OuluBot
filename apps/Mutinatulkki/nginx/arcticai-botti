@@ -1,0 +1,58 @@
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    server_name _;
+
+    location /TKI-hankkeet/ArcticAI-botti/ {
+        alias /srv/TKI-hankkeet/ArcticAI-botti/web/;
+        index index.html;
+    }
+
+    location = /TKI-hankkeet/ArcticAIChatbotti {
+        return 301 https://$host/TKI-hankkeet/ArcticAIChatbotti/;
+    }
+
+    location ^~ /TKI-hankkeet/ArcticAIChatbotti/ {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+
+    server_name 193.167.145.67;
+
+    ssl_certificate     /etc/nginx/ssl/arcticai.crt;
+    ssl_certificate_key /etc/nginx/ssl/arcticai.key;
+
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    client_max_body_size 100m;
+
+    location = /TKI-hankkeet/ArcticAIChatbotti {
+        return 301 /TKI-hankkeet/ArcticAIChatbotti/;
+    }
+
+    location ^~ /TKI-hankkeet/ArcticAIChatbotti/ {
+        # The trailing slash strips this public prefix. The Node service keeps
+        # its internal /api and static routes while the browser stays mounted
+        # below /TKI-hankkeet/ArcticAIChatbotti/.
+        proxy_pass http://127.0.0.1:5500/;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="fi" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#101722" />
+    <title>Toripolliisi</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./avatar-kiosk.css?v=20261124" />
+  </head>
+  <body>
+    <main class="kiosk" id="kiosk">
+      <button class="kiosk-close" id="kioskClose" type="button" aria-label="Sulje avatarikkuna">×</button>
+      <div class="state-hero" data-state="sleeping" aria-hidden="true"></div>
+      <audio id="agentAudioElement" hidden></audio>
+      <div class="avatar-panel" id="avatarPanel">
+        <div
+          class="avatar-stage"
+          id="avatarStage"
+          role="button"
+          tabindex="0"
+          aria-label="Aloita tai lopeta keskustelu Toripolliisin kanssa"
+        ></div>
+      </div>
+    </main>
+    <script type="importmap">
+      {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+    </script>
+    <script type="module" src="./avatar.js?v=20261124-avatar-kiosk"></script>
+    <script src="./avatar-kiosk.js?v=20261124" defer></script>
+  </body>
+</html>

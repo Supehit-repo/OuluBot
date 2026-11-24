@@ -50,7 +50,7 @@ function isStopConversationCommand(value) {
     .replace(/\s+/g, " ")
     .trim();
 
-  return /^(?:lopeta|opeta|kaskalu|keskalu)[.!?]*$/.test(normalized) || /\b(?:lopeta|opeta)(?:\s+(?:tama\s+)?)?keskustel\w*\b/.test(normalized);
+  return /\b(?:lopeta|opeta)(?:\s+(?:tama\s+)?)?keskustel\w*\b/.test(normalized);
 }
 
 function normalizeTulkkiQuery(value) {

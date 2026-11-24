@@ -156,6 +156,8 @@ services:
       PIPER_BIN: piper
       TTS_MAX_CHARS: "5000"
       TTS_TIMEOUT_SECONDS: "90"
+      # 0.85 is about 18% faster than Piper's default speaking pace.
+      TTS_LENGTH_SCALE: "0.85"
     volumes:
       - /srv/TKI-hankkeet/Mutinatulkki/piper-models:/models/piper:ro
     healthcheck:

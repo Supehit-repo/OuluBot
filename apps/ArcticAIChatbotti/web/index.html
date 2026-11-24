@@ -1,42 +1,71 @@
 <!doctype html>
 <html lang="fi">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#eef4ff" />
     <title>ArcticAIChatbotti</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <h1>ArcticAIChatbotti</h1>
-    <p>Testisivu toimii</p>
-    <p>Varsinaista paikallista kielimallia käyttävä chatbot rakennetaan myöhemmin. Alla oleva lomake käyttää tällä hetkellä Dockerissa ajettavaa kehitysagenttia.</p>
+    <main class="app-shell">
+      <aside class="panel avatar-panel" id="avatarPanel" aria-labelledby="avatarTitle">
+        <header>
+          <p class="eyebrow">Vaihtoehtoinen käyttöliittymä</p>
+          <h1 id="avatarTitle">Toripolliisi</h1>
+          <p>Avatar seuraa keskustelun tilaa ja käyttää samaa vastausääntä kuin chat.</p>
+        </header>
+        <div class="avatar-stage" id="avatarStage" role="img" aria-label="Toripolliisi-avatar"></div>
+      </aside>
 
-    <form id="chat-form">
-      <label for="message">Viesti</label>
-      <input id="message" name="message" required maxlength="4000">
-      <button type="submit">Lähetä</button>
-    </form>
-    <p id="response" aria-live="polite"></p>
+      <section class="panel conversation-panel" aria-labelledby="conversationTitle">
+        <p class="eyebrow">ArcticAIChatbotti</p>
+        <h2 id="conversationTitle">Keskustelu</h2>
+        <div class="state-hero" data-state="listening">
+          <span class="state-dot" aria-hidden="true"></span>
+          <p id="stateText">Valmiina viestiin</p>
+        </div>
+        <form id="chat-form">
+          <label for="message">Viesti</label>
+          <textarea id="message" name="message" required maxlength="4000" placeholder="Kirjoita kysymys tai viesti"></textarea>
+          <button type="submit">Lähetä</button>
+        </form>
+      </section>
 
-    <script>
-      const form = document.querySelector('#chat-form');
-      const response = document.querySelector('#response');
+      <section class="panel result-panel" aria-labelledby="resultTitle">
+        <header class="result-header">
+          <div>
+            <p class="eyebrow">Tulkinta ja vastaus</p>
+            <h2 id="resultTitle">Vastaus</h2>
+          </div>
+          <span class="status-chip" id="requestStatus">Odottaa</span>
+        </header>
+        <p class="response" id="response" aria-live="polite">Kirjoita viesti, niin vastaus näkyy tässä.</p>
+        <audio id="agentAudioElement" preload="auto" hidden></audio>
+      </section>
 
-      form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        response.textContent = 'Odotetaan vastausta...';
+      <aside class="panel info-panel" aria-labelledby="infoTitle">
+        <p class="eyebrow">Palvelu</p>
+        <h2 id="infoTitle">Näin keskustelu etenee</h2>
+        <ol>
+          <li>Kirjoita viesti keskustelualueelle.</li>
+          <li>ArcticAI-agentti käsittelee pyynnön.</li>
+          <li>Vastaus näkyy tässä ja avatar seuraa tilaa.</li>
+        </ol>
+        <p class="muted">Käyttöliittymä on vaihtoehtoinen näkymä samalle chat-rajapinnalle.</p>
+      </aside>
+    </main>
 
-        try {
-          const result = await fetch('./api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: form.message.value })
-          });
-          const data = await result.json();
-          response.textContent = result.ok ? data.reply : (data.detail || 'Pyyntö epäonnistui.');
-        } catch {
-          response.textContent = 'Agenttirajapinta ei ole vielä saatavilla tältä sivulta.';
+    <script src="./app.js" defer></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
         }
-      });
+      }
     </script>
+    <script type="module" src="./avatar.js"></script>
   </body>
 </html>

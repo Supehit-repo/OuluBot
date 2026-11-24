@@ -1,18 +1,71 @@
 <!doctype html>
-<html lang="fi">
+<html lang="fi" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f5f7fb" />
+    <meta name="theme-color" content="#121923" />
     <title>Oulu info bot</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="./styles.css?v=20261007-message-flow" />
+    <link rel="stylesheet" href="./styles.css?v=20261124-kiosk-viewport" />
   </head>
   <body>
     <main class="app-shell">
-      <section class="status-panel" aria-live="polite">
-        <button class="settings-button" id="settingsButton" type="button">Asetukset</button>
+      <aside
+        class="avatar-panel"
+        id="avatarPanel"
+        aria-labelledby="avatarTitle"
+        aria-label="Aloita keskustelu Toripolliisin kanssa"
+        role="button"
+        tabindex="0"
+      >
+        <div class="avatar-tools">
+          <button
+            class="avatar-tool-button"
+            id="avatarInfoButton"
+            type="button"
+            aria-label="Tietoa Toripolliisi-avatarista"
+            title="Tietoa avatarista"
+          >
+            <span aria-hidden="true">i</span>
+          </button>
+          <button
+            class="avatar-tool-button"
+            id="avatarKioskButton"
+            type="button"
+            aria-label="Avaa Toripolliisi omaan ikkunaan"
+            title="Avaa koko näytön avatar"
+          >
+            <span aria-hidden="true">⛶</span>
+          </button>
+        </div>
+        <button class="kiosk-close-button" id="kioskCloseButton" type="button" aria-label="Sulje avatarikkuna">×</button>
+        <header class="avatar-header">
+          <h2 id="avatarTitle">Toripolliisi</h2>
+        </header>
+        <div class="avatar-stage" id="avatarStage" role="img" aria-label="Toripolliisi-avatar"></div>
 
+        <dialog class="avatar-info-dialog" id="avatarInfoDialog" aria-labelledby="avatarInfoTitle">
+          <div class="avatar-info-header">
+            <h2 id="avatarInfoTitle">Tietoa Toripolliisi-avatarista</h2>
+            <button class="avatar-info-close" id="avatarInfoCloseButton" type="button" aria-label="Sulje">×</button>
+          </div>
+          <p>
+            Avatarin pohjana on tekoälyllä (Tripo AI) luotu 3D-malli Oulun Toripolliisista. Blenderissä hahmolle
+            avattiin silmät ja suu, ja sille rakennettiin suun blendshapes-asennot sekä yksinkertainen luuranko.
+          </p>
+          <p>
+            Hahmo piirtyy suoraan selaimeen. Kun botti vastaa, suomenkielinen puhesynteesi kertoo jokaisen äänteen
+            tarkan ajoituksen, ja Toripolliisin suu muodostaa sen mukaan vokaalit ja sulkee huulet p-, b- ja
+            m-äänteissä.
+          </p>
+          <p>
+            Ilme seuraa keskustelua: Toripolliisi nukkuu, kuuntelee, miettii ja puhuu. Kaikki toimii Oamkin omalla
+            palvelimella ilman ulkoisia tekoälypalveluita.
+          </p>
+        </dialog>
+      </aside>
+
+      <section class="status-panel" aria-live="polite">
         <div class="brand-row">
           <div class="brand-content">
             <div class="brand-name-wrap">
@@ -28,19 +81,6 @@
               <button class="edit-name-button" id="editNameButton" type="button" aria-label="Muokkaa palvelun nimeä">
                 <span aria-hidden="true">✎</span>
               </button>
-            </div>
-
-            <div class="response-output" aria-label="Vastauksen muoto">
-              <label class="response-choice">
-                <input id="responseTextCheckbox" type="checkbox" />
-                <span class="response-checkbox" aria-hidden="true"></span>
-                <span>Teksti</span>
-              </label>
-              <label class="response-choice">
-                <input id="responseAudioCheckbox" type="checkbox" />
-                <span class="response-checkbox" aria-hidden="true"></span>
-                <span>Ääni</span>
-              </label>
             </div>
 
             <audio
@@ -300,6 +340,7 @@
         <div class="result-header">
           <h2 id="resultTitle">Tulkinta ja vastaus</h2>
           <div class="result-actions">
+            <button class="settings-button" id="settingsButton" type="button">Asetukset</button>
             <button class="text-button speech-stop-button" id="stopSpeechButton" type="button" hidden disabled>
               Pysäytä puhe
             </button>
@@ -360,7 +401,6 @@
 
       <aside class="architecture-panel" aria-labelledby="architectureTitle">
         <header class="architecture-header">
-          <p class="eyebrow">Messudemo</p>
           <h2 id="architectureTitle">Näin vastaus muodostuu</h2>
           <p>Kaikki käsittely tapahtuu paikallisissa Docker-konteissa.</p>
           <p class="flow-live-status" id="flowLiveStatus" aria-live="polite">
@@ -441,6 +481,15 @@
       </aside>
     </main>
 
-    <script src="./app.js?v=20261007-message-flow" defer></script>
+    <script src="./app.js?v=20261124-kiosk-agent" defer></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+      }
+    </script>
+    <script type="module" src="./avatar.js?v=20261124-full-model"></script>
   </body>
 </html>

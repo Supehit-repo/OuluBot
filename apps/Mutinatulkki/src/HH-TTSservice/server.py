@@ -13,6 +13,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from piper import PiperVoice
+from piper.config import SynthesisConfig
 from pydantic import BaseModel, Field
 
 
@@ -32,6 +33,19 @@ class SpeakRequest(BaseModel):
 
 
 app = FastAPI(title=SERVICE_NAME)
+
+
+def parse_positive_float(name: str, default: float) -> float:
+    """Read a positive tuning value without making a bad env value fatal."""
+    try:
+        value = float(os.getenv(name, str(default)))
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+# Piper's default is 1.0. A smaller value makes the spoken answer faster.
+LENGTH_SCALE = parse_positive_float("TTS_LENGTH_SCALE", 1.0)
 
 
 def parse_cors_origins() -> list[str]:
@@ -162,7 +176,11 @@ def synthesize_wav(text: str, voice_id: str) -> tuple[bytes, dict[str, Any]]:
             voice = load_voice(voice_id)
             output = io.BytesIO()
             with wave.open(output, "wb") as wav_file:
-                voice.synthesize_wav(clean_text, wav_file)
+                voice.synthesize_wav(
+                    clean_text,
+                    wav_file,
+                    syn_config=SynthesisConfig(length_scale=LENGTH_SCALE),
+                )
             wav_bytes = output.getvalue()
         except Exception as error:  # noqa: BLE001
             raise HTTPException(status_code=500, detail=f"Piper synthesis failed: {compact_error(error)}") from error
@@ -175,6 +193,7 @@ def synthesize_wav(text: str, voice_id: str) -> tuple[bytes, dict[str, Any]]:
         "model": str(model_path),
         "hasConfig": config_path is not None,
         "bytes": len(wav_bytes),
+        "lengthScale": LENGTH_SCALE,
         "timingMs": elapsed_ms(started_at),
     }
     return wav_bytes, metadata
@@ -238,6 +257,7 @@ def speak(payload: SpeakRequest) -> Response:
                 "Pragma": "no-cache",
                 "X-TTS-Service": SERVICE_NAME,
                 "X-TTS-Voice": metadata["voice"],
+                "X-TTS-Length-Scale": str(metadata["lengthScale"]),
                 "X-TTS-Time-Ms": str(metadata["timingMs"]),
             },
         )

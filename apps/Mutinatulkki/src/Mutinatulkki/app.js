@@ -13,7 +13,7 @@ const apiEndpoint = (path) => `${API_PATH_PREFIX}${String(path).replace(/^\/+/, 
 const CLIENT_CONFIG_ENDPOINT = apiEndpoint("api/client-config");
 const DEFAULT_TTS_ENDPOINT = apiEndpoint("api/tts/speak");
 const DEFAULT_TTS_VOICE = "fi_FI-harri-medium";
-const DEFAULT_RESPONSE_TEXT_ENABLED = true;
+const DEFAULT_RESPONSE_TEXT_ENABLED = false;
 const DEFAULT_RESPONSE_AUDIO_ENABLED = true;
 const SILENT_WAV_DATA_URL =
   "data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YSADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
@@ -23,8 +23,11 @@ const DEFAULT_CHUNK_SILENCE_TIMEOUT_MS = 800;
 const CHUNK_SILENCE_TIMEOUT_OPTIONS = [400, 600, 800, 1000, 1200, 1500];
 const DEFAULT_MICROPHONE_SENSITIVITY = "normal";
 const MICROPHONE_SENSITIVITY_OPTIONS = ["low", "normal", "high"];
-const DEFAULT_THEME = "light";
+const DEFAULT_THEME = "dark";
 const THEME_OPTIONS = ["light", "dark"];
+const isAvatarKioskMode = new URLSearchParams(window.location.search).get("kiosk") === "1";
+const avatarStateChannel =
+  typeof BroadcastChannel === "function" ? new BroadcastChannel("toripolliisi-avatar-state") : null;
 const VAD_SENSITIVITY_PROFILES = {
   low: {
     speechThreshold: 0.05,
@@ -51,6 +54,11 @@ const BROWSER_STT_LANGUAGE = "fi-FI";
 const BROWSER_STT_DRAFT_FLUSH_MS = 650;
 const BROWSER_STT_DRAFT_FLUSH_INTERVAL_MS = 120;
 const INTERRUPT_CAPTURE_ENDPOINT = apiEndpoint("api/interrupt");
+// Chrome's built-in speech recognition already handles the normal "lopeta"
+// command during playback. The second, recorder-based verifier can be useful
+// in difficult acoustic environments, but it competes with audio playback and
+// may repeatedly transcribe sound leaking from the loudspeaker.
+const RELIABLE_INTERRUPT_CAPTURE_ENABLED = false;
 const INTERRUPT_COMMAND_THRESHOLD = 0.06;
 const INTERRUPT_COMMAND_MIN_SPEECH_MS = 360;
 const INTERRUPT_COMMAND_SILENCE_MS = 420;
@@ -127,8 +135,12 @@ const elements = {
   serviceName: document.querySelector("#serviceName"),
   serviceNameInput: document.querySelector("#serviceNameInput"),
   editNameButton: document.querySelector("#editNameButton"),
-  responseTextCheckbox: document.querySelector("#responseTextCheckbox"),
-  responseAudioCheckbox: document.querySelector("#responseAudioCheckbox"),
+  avatarPanel: document.querySelector("#avatarPanel"),
+  avatarInfoButton: document.querySelector("#avatarInfoButton"),
+  avatarInfoDialog: document.querySelector("#avatarInfoDialog"),
+  avatarInfoCloseButton: document.querySelector("#avatarInfoCloseButton"),
+  avatarKioskButton: document.querySelector("#avatarKioskButton"),
+  kioskCloseButton: document.querySelector("#kioskCloseButton"),
   agentAudioElement: document.querySelector("#agentAudioElement"),
   settingsButton: document.querySelector("#settingsButton"),
   settingsOverlay: document.querySelector("#settingsOverlay"),
@@ -238,6 +250,7 @@ let browserSttLastInterimText = "";
 let browserSttChunkStartFinalIndex = 0;
 let browserSttStarted = false;
 let isSpeakingAgentAnswer = false;
+let isAgentAudioPlaying = false;
 let ttsAbortController = null;
 let agentAudio = null;
 let agentAudioObjectUrl = "";
@@ -264,6 +277,7 @@ function setState(name) {
   elements.stateIcon.textContent = nextState.icon;
   elements.stateLabel.textContent = nextState.label;
   elements.stateHelp.textContent = nextState.help;
+  avatarStateChannel?.postMessage({ state: name });
 }
 
 function getMessageFlowNodes() {
@@ -421,18 +435,12 @@ function handleServiceNameInputKeydown(event) {
 }
 
 function normalizeResponseOutput(textEnabled, audioEnabled) {
-  const normalized = {
-    responseTextEnabled:
-      typeof textEnabled === "boolean" ? textEnabled : DEFAULT_RESPONSE_TEXT_ENABLED,
-    responseAudioEnabled:
-      typeof audioEnabled === "boolean" ? audioEnabled : DEFAULT_RESPONSE_AUDIO_ENABLED,
+  // The public avatar view is voice-only. Ignore old local preferences so a
+  // previously stored text-only choice cannot disable the spoken response.
+  return {
+    responseTextEnabled: DEFAULT_RESPONSE_TEXT_ENABLED,
+    responseAudioEnabled: DEFAULT_RESPONSE_AUDIO_ENABLED,
   };
-
-  if (!normalized.responseTextEnabled && !normalized.responseAudioEnabled) {
-    normalized.responseTextEnabled = true;
-  }
-
-  return normalized;
 }
 
 function loadSettings() {
@@ -520,11 +528,11 @@ function setTheme(theme) {
 }
 
 function isResponseTextEnabled() {
-  return appSettings.responseTextEnabled !== false;
+  return false;
 }
 
 function isResponseAudioEnabled() {
-  return appSettings.responseAudioEnabled === true;
+  return true;
 }
 
 function setResponseOutput(kind, enabled) {
@@ -939,6 +947,17 @@ function getAgentAnswer(result) {
   return candidates.find((value) => typeof value === "string" && value.trim())?.trim() || "";
 }
 
+function getSpeechAnswer(answer) {
+  // Sources belong in the visible transcript only. Do not make Piper read a
+  // trailing source heading, URL, or bare list marker such as "1." aloud.
+  return normalizeWhitespace(
+    String(answer || "")
+      .replace(/(?:^|\n)\s*lähteet?\s*:[\s\S]*$/i, " ")
+      .replace(/https?:\/\/[^\s|]+/gi, " ")
+      .replace(/(?:^|\s)\d+\.\s*$/u, " "),
+  );
+}
+
 function getAgentSourceLine(result) {
   const rawSources = Array.isArray(result?.agent?.sources) ? result.agent.sources : [];
   const sources = [];
@@ -1094,6 +1113,7 @@ function pauseAgentAudio() {
   const audio = getAgentAudioElement();
 
   audio.pause();
+  isAgentAudioPlaying = false;
   audio.onplay = null;
   audio.onended = null;
   audio.onerror = null;
@@ -1116,6 +1136,7 @@ function clearAgentAudioSource() {
 function finishAgentSpeech() {
   stopReliableVoiceInterruptCapture();
   stopInterruptRecognition();
+  isAgentAudioPlaying = false;
   isSpeakingAgentAnswer = false;
   setSpeechStopButton(false);
 
@@ -1166,7 +1187,6 @@ function startAgentSpeechPlayback(statusText) {
   resetInactivityTimer();
   updateAgentAudioPlayerVisibility();
   elements.speechStatus.textContent = statusText;
-  startInterruptRecognition();
 
   return requestId;
 }
@@ -1240,11 +1260,14 @@ async function playAgentAudioBlob(audioBlob, requestId) {
     if (requestId !== agentSpeechRequestId) {
       return;
     }
+    isAgentAudioPlaying = true;
+    startInterruptRecognition();
     resetInactivityTimer();
     elements.speechStatus.textContent = "Luetaan vastausta";
   };
   audio.onended = () => {
     if (requestId === agentSpeechRequestId) {
+      isAgentAudioPlaying = false;
       finishAgentSpeech();
     }
   };
@@ -1608,15 +1631,9 @@ function isVoiceInterruptCommand(text) {
   return /^(?:lop\w{0,6}ta|ope\w{0,5}ta|kaskalu|keskalu|seis|stop|keskeyt\w*)$/.test(compactCommand);
 }
 
-function isConversationStopCommand(text, allowBareStop = false) {
+function isConversationStopCommand(text) {
   const normalized = normalizeInterruptCommand(text);
-  return (
-    CONVERSATION_STOP_PATTERN.test(normalized) ||
-    // The recognizer occasionally loses the soft initial L in "lopeta" or
-    // returns the observed one-word form "käskälu".  These forms are only
-    // accepted as commands when no normal answer is being handled.
-    (allowBareStop && /^(?:lopeta|opeta|kaskalu|keskalu)[.!?]*$/.test(normalized))
-  );
+  return CONVERSATION_STOP_PATTERN.test(normalized);
 }
 
 function stopConversationByVoiceCommand(transcript) {
@@ -2356,7 +2373,9 @@ function handleVadTick() {
   }
 
   if (isSpeakingAgentAnswer) {
-    handleReliableVoiceInterruptVadTick();
+    if (RELIABLE_INTERRUPT_CAPTURE_ENABLED && isAgentAudioPlaying) {
+      handleReliableVoiceInterruptVadTick();
+    }
     setVadSpeechStatus("Luetaan vastausta");
     return;
   }
@@ -2814,7 +2833,7 @@ async function saveMutinaCapture(audioBlob, chunkDetails) {
     const agentError = result?.agent?.error;
     const agentSourceLine = getAgentSourceLine(result);
 
-    if (result?.command === "stop_conversation" || isConversationStopCommand(tulkkiText, true)) {
+    if (result?.command === "stop_conversation" || isConversationStopCommand(tulkkiText)) {
       stopConversationByVoiceCommand(tulkkiText);
       return;
     }
@@ -2862,9 +2881,10 @@ async function saveMutinaCapture(audioBlob, chunkDetails) {
       if (isResponseAudioEnabled()) {
         startMessageFlowVoice(questionId);
         const serverTtsAudio = getServerTtsAudio(result);
+        const speechAnswer = getSpeechAnswer(agentAnswer);
         const audioPromise = serverTtsAudio
           ? playServerTtsAudio(serverTtsAudio)
-          : speakAgentAnswer(agentAnswer, Boolean(agentSourceLine));
+          : speakAgentAnswer(speechAnswer, Boolean(agentSourceLine));
 
         audioPromise.catch((error) => {
           if (isInterruptedAudioPlay(error)) {
@@ -3089,8 +3109,6 @@ function setResponseCheckboxState(checkbox, isSelected) {
 }
 
 function updateResponseOutputUi() {
-  setResponseCheckboxState(elements.responseTextCheckbox, isResponseTextEnabled());
-  setResponseCheckboxState(elements.responseAudioCheckbox, isResponseAudioEnabled());
   updateAgentAudioPlayerVisibility();
 }
 
@@ -3266,14 +3284,48 @@ elements.clearButton.addEventListener("click", clearTranscript);
 elements.editNameButton.addEventListener("click", editServiceName);
 elements.serviceNameInput.addEventListener("keydown", handleServiceNameInputKeydown);
 elements.serviceNameInput.addEventListener("blur", () => finishServiceNameEdit());
-elements.responseTextCheckbox.addEventListener("change", () => {
-  setResponseOutput("text", elements.responseTextCheckbox.checked);
+elements.avatarPanel.addEventListener("click", () => {
+  if (isAvatarKioskMode) {
+    toggleConversation();
+    return;
+  }
+  if (!isSessionActive && !isStartingSession && !isStoppingSession) {
+    startConversation();
+  }
 });
-elements.responseAudioCheckbox.addEventListener("change", () => {
-  setResponseOutput("audio", elements.responseAudioCheckbox.checked);
-
-  if (elements.responseAudioCheckbox.checked) {
-    unlockAgentAudioPlayback();
+elements.avatarKioskButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  const kioskWindow = window.open(
+    "./?kiosk=1",
+    "toripolliisi-avatar",
+    "popup=yes,width=900,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes",
+  );
+  kioskWindow?.focus();
+});
+elements.kioskCloseButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  window.close();
+  window.setTimeout(() => {
+    if (!window.closed) window.history.back();
+  }, 100);
+});
+elements.avatarInfoButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  elements.avatarInfoDialog.showModal();
+});
+elements.avatarInfoCloseButton.addEventListener("click", () => elements.avatarInfoDialog.close());
+elements.avatarInfoDialog.addEventListener("click", (event) => {
+  if (event.target === elements.avatarInfoDialog) elements.avatarInfoDialog.close();
+});
+elements.avatarPanel.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    elements.avatarPanel.click();
+  }
+});
+avatarStateChannel?.addEventListener("message", (event) => {
+  if (event.data?.action === "toggle-conversation") {
+    toggleConversation();
   }
 });
 elements.settingsButton.addEventListener("click", openSettings);
@@ -3297,10 +3349,18 @@ elements.themeOptions.forEach((option) => {
 document.addEventListener("pointerdown", (event) => {
   handleUserActivity(event);
   unlockAgentAudioPlayback();
+  if (isAvatarKioskMode) {
+    document.body.classList.add("kiosk-close-visible");
+    window.clearTimeout(window.kioskCloseHideTimer);
+    window.kioskCloseHideTimer = window.setTimeout(() => {
+      document.body.classList.remove("kiosk-close-visible");
+    }, 2500);
+  }
 }, true);
 document.addEventListener("keydown", handleUserActivity, true);
 document.addEventListener("keydown", handleSettingsKeydown);
 
+if (isAvatarKioskMode) document.body.classList.add("avatar-kiosk-mode");
 setState("sleeping");
 setConversationButton("inactive");
 setServiceName(loadServiceName());

@@ -6,7 +6,8 @@ ENV NODE_ENV=production \
 
 WORKDIR /app
 
-COPY server.js app.js index.html styles.css ./
+COPY server.js app.js avatar.js avatar-kiosk.js index.html avatar-kiosk.html styles.css avatar-kiosk.css ./
+COPY assets ./assets
 COPY docs ./docs
 COPY config ./config
 
